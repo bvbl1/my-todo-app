@@ -4,43 +4,38 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
 
 jobs:
   build:
-    name: Build, Test and Docker Compose
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20'
+    # buildint and tests
+    - name: Build and test
+      run: |
+        cd backend && go test ./...
+        cd ../frontend && npm install && npm run build
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
+    # Docker-images
+    - name: Build Docker images
+      run: |
+        docker-compose build
+        docker tag todo-backend bvbl/todo-backend:latest
+        docker tag todo-frontend bvbl/todo-frontend:latest
 
-    - name: Install frontend dependencies
-      working-directory: ./frontend
-      run: npm install
+    # push to Docker Hub
+    - name: Push to Docker Hub
+      run: |
+        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        docker push bvbl/todo-backend:latest
+        docker push bvbl/todo-frontend:latest
 
-    - name: Build frontend
-      working-directory: ./frontend
-      run: npm run build
-
-    - name: Run Go tests
-      working-directory: ./backend
-      run: go test ./...
-
-    - name: Docker Compose Build
-      run: docker-compose build
-
-    - name: Pipeline finished
-      run: echo "CI/CD pipeline completed successfully"
+    # deploy to Kubernetes
+    - name: Deploy to Kubernetes
+      run: |
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig.yaml
+        export KUBECONFIG=kubeconfig.yaml
+        kubectl apply -f k8s/deployment.yaml
+        kubectl get pods  # Проверка, что поды запустились
