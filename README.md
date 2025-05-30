@@ -33,4 +33,4 @@ Postgres is used to store the TODO items by saving rows in as id, item-text, and
 
 ## React
 
-React is used here to create the frontend fully responsive application on the client side and is built using components..
+React is used here to create the frontend fully responsive application on the client side and is built using components.
