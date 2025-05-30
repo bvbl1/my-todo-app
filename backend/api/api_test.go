@@ -4,6 +4,7 @@ import (
 	// Assuming 'db *sql.DB' is defined globally or accessible.
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os" // Needed for os.Exit and environment variables
@@ -179,27 +180,37 @@ func performRequest(r http.Handler, method, path string) *httptest.ResponseRecor
 // TestMain sets up the test environment.
 // It's run once before all tests in the package.
 func TestMain(m *testing.M) {
+	fmt.Println("TestMain: Starting test setup...")
+
 	// 1. Setup Database Connection
-	// This *must* use environment variables for CI (DB_HOST=postgres, etc.)
-	// SetupPostgres() // This function (from your main code) should initialize the global 'db'.
-	// Forcing a call to a placeholder if not defined, to highlight its necessity.
-	// In your actual setup, ensure your real SetupPostgres is called.
-	if os.Getenv("CI") != "" { // Simple check if running in a CI-like environment
-		fmt.Println("TestMain: Attempting to connect to DB using ENV VARS for CI...")
+	// CRITICAL: Call YOUR function that initializes the global 'db *sql.DB' variable.
+	// This function must use environment variables for CI (DB_HOST=postgres, etc.)
+	// Ensure 'SetupPostgres' is the correct function name from your codebase.
+	// If it's in a different package, qualify it (e.g., myapp.SetupPostgres()).
+	SetupPostgres() // <--- THIS LINE IS NOW UNCOMMENTED.
+
+	// Verify that 'db' is not nil after SetupPostgres()
+	if db == nil {
+		log.Fatalf("TestMain: Global 'db' variable is nil AFTER calling SetupPostgres(). Ensure SetupPostgres correctly initializes it.")
 	}
-	// Call your actual DB setup function here. For example:
-	// myapp.SetupPostgres() // if SetupPostgres is in myapp package
-	// This must initialize the 'db' variable used by emptyTable/displayTable.
+	fmt.Println("TestMain: Database setup function called.")
 
 	// 2. Setup Router
-	router = SetupRoutesForTest() // Use the test-specific router setup.
+	router = SetupRoutesForTest()
+	fmt.Println("TestMain: Router setup complete.")
 
 	// 3. Run Tests
+	fmt.Println("TestMain: Running tests...")
 	exitCode := m.Run()
 
 	// 4. Teardown (optional)
-	// Example: if db != nil { db.Close() }
+	if db != nil {
+		// Consider closing the DB connection if it's not automatically handled.
+		// db.Close()
+		fmt.Println("TestMain: Teardown - DB connection could be closed here.")
+	}
 
+	fmt.Printf("TestMain: Exiting with code %d\n", exitCode)
 	os.Exit(exitCode)
 }
 
