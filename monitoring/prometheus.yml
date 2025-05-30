@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'go-api'
+    static_configs:
+      - targets: ['go-api:8081']  # здесь hostname контейнера и порт, где метрики
+
+  # Можно добавить мониторинг PostgreSQL через exporter, если нужен
